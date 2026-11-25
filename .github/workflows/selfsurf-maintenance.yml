@@ -1,0 +1,44 @@
+
+name: SelfSurf Silent Maintenance
+
+on:
+  schedule:
+    - cron: "0 8 1,7,13,19,25,28,30 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: selfsurf-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check existing SelfSurf graph
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SUPABASE_URL="https://yrwjvbktmypnwivyzekz.supabase.co"
+          SUPABASE_KEY="sb_publishable_MrqxFm8IseNlcdMRC1yYHw_2inL77rP"
+
+          HTTP_CODE=$(curl -sS \
+            --connect-timeout 15 \
+            --max-time 30 \
+            -o /dev/null \
+            -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/ss_blocks?select=vote_id&limit=1" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "SelfSurf Vote Lattice accessible."
+          else
+            echo "Supabase unavailable or inaccessible: HTTP $HTTP_CODE"
+            exit 1
+          fi
